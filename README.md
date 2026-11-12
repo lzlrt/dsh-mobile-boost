@@ -1,2 +1,75 @@
 # dsh-mobile-boost
-Narrow-screen thumb ergonomics for the desktop DSH UI — born for dsh-desktop-link. 40px touch targets, 16px body text, no horizontal scroll, soft-keyboard-safe focus. Active only on (max-width:1023px) and (pointer:coarse).
+
+> **为 [`dsh-desktop-link`](https://github.com/lzlrt/dsha-desktop-link) 而生。**
+> 那个插件负责「把手机带进电脑版 DSH」——在 DSHA 里点一下按钮，系统浏览器打开桌面端；
+> 这个插件负责接下来那半步：**让桌面的界面在拇指下真的能用**。
+> 没有 `dsh-desktop-link` 它照样能装、能用，但它是为解决那条链路上暴露的问题才写的。
+
+> 给 DeepSeek Harness 的 Web UI 补一层手机窄屏适配：**触控目标放大、正文可读、页面不横向乱跑、输入框不被软键盘吃掉**。
+> 只在 `(max-width: 1023px) and (pointer: coarse)` 生效——桌面端（鼠标）无论如何都是**完全 no-op**。
+
+和 [`dsh-web-mobile`](https://github.com/mexiaosqwq/dsh-web-mobile) 是**叠加关系**，不是替代：那个插件重建移动布局（抽屉、底部 sheet、压缩），这个插件只往上加一层「手感」修正，用的是同一条媒体查询门槛，所以两者不会互相抢布局。
+
+## 为什么需要它
+
+这个插件的由来很具体：`dsh-desktop-link` 在手机上点开后，打开的是**电脑版 DSH 的完整界面**——桌面尺寸的按钮、固定侧栏、按桌面排版处理的正文。用户的原话是「排版不是很好」：按钮点不中、侧栏盖住内容收不回来、字小、输入框被软键盘顶掉。
+
+先量了一遍真实页面（390×844）：
+
+- `dsh-web-mobile` **其实是生效的**（抽屉按钮在、文档无横向溢出），
+- 但一屏 29 个按钮里 **24 个高度 < 32px**，最小 21px，**全部来自第三方浮层插件**（角色挂件、余额面板），原生只有 2 个。
+
+所以问题不是「移动布局没启用」，而是「布局改了，手感没人管」。这个插件只补手感——**不重建布局、不碰 DOM 结构、不建 React 树、不发任何请求**。它做的事只有两件：往 `<head>` 插一张样式表，挂一个 `focusin` 监听。
+
+在 `dsh-web-mobile` 已经把布局改成移动形态之后，仍然有两件事没人管：
+
+1. **第三方 UI 插件（浮层挂件、余额面板、角色按钮）不会跟着变大**——实测一屏 29 个按钮里 24 个高度 < 32px，最小 21px，手指点不中。
+2. **正文与输入区的字号、软键盘避让**是宿主的事，宿主是按桌面尺寸设计的。
+
+这个插件只做这两件事，**不碰 DOM 结构、不建 React 树、不发请求**——它只往 `<head>` 里插一张样式表，再挂一个 `focusin` 监听。WebView 里最不容易把页面搞挂的就是这种形态。
+
+## 安装
+
+```sh
+dsh plugin --profile web add dsh-mobile-boost
+```
+
+或者在 DSHA 的「插件市场 → 从链接安装」里填包名 `dsh-mobile-boost`。
+
+**装在哪一侧？** 你在手机上看到的那张页面，是**电脑上 `dsh web` 提供的**（`dsh-desktop-link` 把它交给系统浏览器打开）。所以只要装进**电脑的 profile**，手机刷新页面就能看到效果——手机上不需要再装一遍。只有当手机自己跑一套 DSH 时，才需要在手机侧也装。
+
+装完刷新页面即可，**不需要重启 `dsh web`**（客户端半区在页面加载时取）。
+
+## 它具体改了什么
+
+| 症状 | 处理 |
+|---|---|
+| 按钮/输入框太小点不中 | `button`、`[role=button/menuitem/tab/option]`、`input`、`select`、`textarea` 最小边 **40px**（代码块里的复制按钮除外，避免撑高行） |
+| 字太小 / 整体被缩小 | `body` 强制 16px（同时阻止 Chrome 在聚焦输入框时自动放大），正文 15.5px、行高 1.55，`text-size-adjust: 100%` |
+| 页面左右跑、要横着拖 | `body { overflow-x: hidden }`，`img`/`video` 限宽，宽表格改为块级 + 自身横向滚动 |
+| 侧栏盖住内容收不起来 | 抽屉类容器限宽 `86vw`，永远留一条可以点回去的边 |
+| 输入框被软键盘顶掉 | 聚焦输入框后 320ms，把它滚到可视区中央（不依赖具体容器的滚动实现）；`textarea` 底部留出 `env(safe-area-inset-bottom)` |
+
+## 关掉它
+
+三种方式，都不用改代码：
+
+- **单次**：页面地址后加 `?mb=off`（会写进本机 localStorage，之后一直生效）
+- **恢复**：地址后加 `?mb=on`
+- **控制台**：`__DSH_MOBILE_BOOST__.setEnabled(false)` / `(true)`，`__DSH_MOBILE_BOOST__.active()` 看当前是否生效
+
+## 兼容
+
+- DSH `>= 0.2.1-rc.2`（已在 `0.2.1-rc.2` 与 `0.2.1-rc.5` 上验证）
+- 纯客户端插件，宿主半区是空 `apply()`：没有路由、没有服务、没有请求面
+- 与 `dsh-web-mobile` 同时启用是设计中的用法
+
+## 已知限制
+
+- 只解决「手感」，不改布局结构。要真正的移动布局请装 `dsh-web-mobile`。
+- 40px 是通用值，个别插件若把按钮写死 `height: 38px` 并带 `transform: scale()`，实际渲染会是 38px。
+- 离屏把手（有些挂件把按钮绝对定位到屏幕外）不处理：它们会被 `overflow-x: hidden` 裁掉，不产生横向滚动。
+
+## License
+
+MIT

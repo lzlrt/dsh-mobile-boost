@@ -1,0 +1,54 @@
+{
+  "name": "dsh-mobile-boost",
+  "version": "1.0.1",
+  "description": "Born for dsh-desktop-link: that plugin carries you from DSHA on the phone into the desktop DSH; this one makes that desktop UI usable with a thumb — 40px touch targets, 16px body text, no page-level horizontal scroll, and a focused field that scrolls back above the soft keyboard. Active only on (max-width:1023px) and (pointer:coarse), a complete no-op on desktop.",
+  "license": "MIT",
+  "author": "lzlrt",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lzlrt/dsh-mobile-boost.git"
+  },
+  "homepage": "https://github.com/lzlrt/dsh-mobile-boost#readme",
+  "bugs": {
+    "url": "https://github.com/lzlrt/dsh-mobile-boost/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "mobile",
+    "responsive",
+    "touch",
+    "accessibility"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.1-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  }
+}
